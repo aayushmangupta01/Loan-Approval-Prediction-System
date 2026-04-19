@@ -1,0 +1,1327 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>LoanIQ — Home Loan Approval Predictor</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;0,9..144,900;1,9..144,300&family=DM+Mono:wght@400;500&family=Bricolage+Grotesque:wght@400;500;700;800&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<script>
+tailwind.config = {
+  darkMode: "class",
+  theme: {
+    extend: {
+      fontFamily: {
+        display: ["Fraunces", "serif"],
+        body: ["Bricolage Grotesque", "sans-serif"],
+        mono: ["DM Mono", "monospace"]
+      },
+      colors: {
+        ink: "#0D0E12",
+        paper: "#F5F3EE",
+        cream: "#EAE7DF",
+        sage: "#3D5A47",
+        "sage-light": "#EBF2ED",
+        "sage-mid": "#6B9E7A",
+        amber: "#C97B2A",
+        "amber-light": "#FDF3E3",
+        crimson: "#C0392B",
+        "crimson-light": "#FDECEA",
+        muted: "#8A8A8A",
+        border: "#DDDBD5"
+      }
+    }
+  }
+}
+</script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body { font-family: "Bricolage Grotesque", sans-serif; background: #F5F3EE; color: #0D0E12; }
+
+  .material-symbols-outlined {
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    font-size: 20px;
+  }
+  .filled { font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+
+  /* NOISE TEXTURE OVERLAY */
+  .noise::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.025'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.4;
+  }
+
+  /* GRID PATTERN */
+  .grid-bg {
+    background-image:
+      linear-gradient(rgba(13,14,18,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(13,14,18,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  /* CUSTOM INPUTS */
+  .field-input {
+    width: 100%;
+    background: #FFFFFF;
+    border: 1.5px solid #DDDBD5;
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-family: "Bricolage Grotesque", sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: #0D0E12;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    outline: none;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+  .field-input:focus {
+    border-color: #3D5A47;
+    box-shadow: 0 0 0 3px rgba(61,90,71,0.12);
+  }
+  select.field-input {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238A8A8A' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 36px;
+    cursor: pointer;
+  }
+
+  /* SLIDER */
+  input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 4px; border-radius: 99px; background: #DDDBD5; outline: none; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 18px; height: 18px; border-radius: 50%; background: #3D5A47; cursor: pointer; border: 3px solid #fff; box-shadow: 0 0 0 2px #3D5A47; transition: transform 0.15s; }
+  input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+  input[type=range]::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: #3D5A47; cursor: pointer; border: 3px solid #fff; box-shadow: 0 0 0 2px #3D5A47; }
+
+  /* PILL TOGGLES */
+  .pill-toggle { display: flex; background: #EAE7DF; border-radius: 99px; padding: 3px; gap: 2px; }
+  .pill-btn {
+    flex: 1; padding: 6px 14px; border-radius: 99px; font-size: 12px; font-weight: 700;
+    letter-spacing: 0.04em; cursor: pointer; transition: all 0.2s;
+    border: none; background: transparent; color: #8A8A8A; white-space: nowrap;
+  }
+  .pill-btn.active { background: #0D0E12; color: #F5F3EE; }
+
+  /* RESULT CARD ANIMATIONS */
+  @keyframes fadeSlideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes scaleIn { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: scale(1); } }
+  @keyframes progressFill { from { width: 0%; } to { width: var(--target-w); } }
+  @keyframes countUp { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+  .result-appear { animation: fadeSlideUp 0.5s cubic-bezier(0.34,1.56,0.64,1) both; }
+  .scale-appear { animation: scaleIn 0.4s cubic-bezier(0.34,1.56,0.64,1) both; }
+
+  .progress-bar { height: 8px; border-radius: 99px; background: #DDDBD5; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 99px; transition: width 1.2s cubic-bezier(0.25,1,0.5,1); }
+
+  /* FACTOR BAR */
+  .factor-bar { height: 6px; border-radius: 99px; background: #EAE7DF; overflow: hidden; }
+  .factor-fill { height: 100%; border-radius: 99px; transition: width 1s ease; }
+
+  /* CARD HOVER */
+  .hover-lift { transition: transform 0.2s, box-shadow 0.2s; }
+  .hover-lift:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(13,14,18,0.1); }
+
+  /* MODEL BADGE */
+  .model-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 10px; border-radius: 99px;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
+  }
+  .model-lr { background: #EBF2ED; color: #3D5A47; }
+  .model-dt { background: #FDF3E3; color: #C97B2A; }
+  .model-rf { background: #F0EEF8; color: #5A3D8A; }
+
+  /* SECTION DIVIDER */
+  .section-divider { display: flex; align-items: center; gap: 12px; }
+  .section-divider::before, .section-divider::after { content: ""; flex: 1; height: 1px; background: #DDDBD5; }
+
+  /* STEP NUMBER */
+  .step-num {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: #0D0E12; color: #F5F3EE;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; font-family: "DM Mono", monospace;
+    flex-shrink: 0;
+  }
+
+  /* STAT BOX */
+  .stat-box {
+    background: #fff; border: 1.5px solid #DDDBD5; border-radius: 14px;
+    padding: 14px 16px;
+  }
+
+  /* LOADING */
+  .loading-spinner { animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* TOOLTIP */
+  .tooltip-wrap { position: relative; }
+  .tooltip-wrap .tooltip {
+    display: none; position: absolute; bottom: 125%; left: 50%; transform: translateX(-50%);
+    background: #0D0E12; color: #F5F3EE; font-size: 11px; padding: 5px 10px;
+    border-radius: 6px; white-space: nowrap; pointer-events: none; z-index: 10;
+  }
+  .tooltip-wrap:hover .tooltip { display: block; }
+
+  /* NAV ACTIVE */
+  .nav-item { transition: color 0.15s; }
+  .nav-item.active { color: #3D5A47; }
+
+  /* BOTTOM NAV */
+  .bottom-nav-item { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 16px; border-radius: 12px; cursor: pointer; transition: background 0.15s; }
+  .bottom-nav-item.active { background: #EBF2ED; }
+  .bottom-nav-item.active span { color: #3D5A47; }
+
+  /* DONUT CHART */
+  .donut-ring { transition: stroke-dashoffset 1.2s cubic-bezier(0.25,1,0.5,1); }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #DDDBD5; border-radius: 99px; }
+
+  /* RESPONSIVE */
+  @media (max-width: 768px) {
+    .hide-mobile { display: none !important; }
+  }
+  @media (min-width: 769px) {
+    .hide-desktop { display: none !important; }
+  }
+</style>
+</head>
+<body class="noise grid-bg min-h-screen pb-24 md:pb-8 relative">
+
+<!-- ═══════════════════════════════════════════════════════════
+     TOP NAVIGATION
+═══════════════════════════════════════════════════════════ -->
+<header class="fixed top-0 w-full z-50" style="background: rgba(245,243,238,0.88); backdrop-filter: blur(20px); border-bottom: 1.5px solid #DDDBD5;">
+  <div class="max-w-7xl mx-auto flex items-center justify-between px-5 h-15" style="height:60px;">
+
+    <!-- Logo -->
+    <div class="flex items-center gap-3">
+      <div style="width:36px;height:36px;background:#0D0E12;border-radius:10px;display:flex;align-items:center;justify-content:center;">
+        <span class="material-symbols-outlined filled" style="color:#F5F3EE;font-size:18px;">home</span>
+      </div>
+      <span style="font-family:'Fraunces',serif;font-weight:700;font-size:20px;letter-spacing:-0.03em;">LoanIQ</span>
+      <span class="model-badge model-lr hide-mobile" style="margin-left:4px;">ML Powered</span>
+    </div>
+
+    <!-- Desktop Nav -->
+    <nav class="hidden md:flex items-center gap-6">
+      <a href="#predictor" class="nav-item active text-sm font-semibold flex items-center gap-1.5" onclick="scrollTo('predictor')">
+        <span class="material-symbols-outlined" style="font-size:16px;">tune</span> Predictor
+      </a>
+      <a href="#analysis" class="nav-item text-sm font-semibold flex items-center gap-1.5" style="color:#8A8A8A;" onclick="scrollTo('analysis')">
+        <span class="material-symbols-outlined" style="font-size:16px;">query_stats</span> Analysis
+      </a>
+      <a href="#models" class="nav-item text-sm font-semibold flex items-center gap-1.5" style="color:#8A8A8A;" onclick="scrollTo('models')">
+        <span class="material-symbols-outlined" style="font-size:16px;">psychology</span> Models
+      </a>
+    </nav>
+
+    <!-- Actions -->
+    <div class="flex items-center gap-3">
+      <button id="darkToggle" onclick="toggleDark()" style="width:36px;height:36px;border-radius:10px;background:#EAE7DF;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;">
+        <span class="material-symbols-outlined" style="font-size:18px;" id="darkIcon">dark_mode</span>
+      </button>
+      <div style="width:36px;height:36px;border-radius:10px;background:#3D5A47;display:flex;align-items:center;justify-content:center;">
+        <span class="material-symbols-outlined filled" style="color:#fff;font-size:18px;">person</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ═══════════════════════════════════════════════════════════
+     MAIN CONTENT
+═══════════════════════════════════════════════════════════ -->
+<main class="max-w-7xl mx-auto px-4 md:px-6" style="padding-top:80px;">
+
+  <!-- ── HERO ── -->
+  <section style="padding: 40px 0 32px;" id="predictor">
+    <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
+      <div>
+        <div class="flex items-center gap-2 mb-3">
+          <span style="background:#EBF2ED;color:#3D5A47;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;padding:4px 10px;border-radius:99px;">Home Loan Approval</span>
+          <span style="background:#FDF3E3;color:#C97B2A;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;padding:4px 10px;border-radius:99px;">3 ML Models</span>
+        </div>
+        <h1 style="font-family:'Fraunces',serif;font-size:clamp(36px,6vw,64px);font-weight:900;line-height:1;letter-spacing:-0.04em;margin:0 0 12px;">
+          Predict Your<br/><em style="font-style:italic;color:#3D5A47;">Approval</em> Odds
+        </h1>
+        <p style="color:#8A8A8A;font-size:15px;max-width:480px;line-height:1.6;margin:0;">
+          Powered by Logistic Regression, Decision Tree &amp; Random Forest — trained on real home loan data to give you an accurate eligibility score.
+        </p>
+      </div>
+      <!-- Stats Row -->
+      <div class="flex gap-3 shrink-0">
+        <div class="stat-box text-center hover-lift" style="min-width:90px;">
+          <div style="font-family:'Fraunces',serif;font-size:26px;font-weight:700;line-height:1;">85%</div>
+          <div style="font-size:11px;color:#8A8A8A;font-weight:600;margin-top:2px;">RF Accuracy</div>
+        </div>
+        <div class="stat-box text-center hover-lift" style="min-width:90px;">
+          <div style="font-family:'Fraunces',serif;font-size:26px;font-weight:700;line-height:1;">614</div>
+          <div style="font-size:11px;color:#8A8A8A;font-weight:600;margin-top:2px;">Training Rows</div>
+        </div>
+        <div class="stat-box text-center hover-lift" style="min-width:90px;">
+          <div style="font-family:'Fraunces',serif;font-size:26px;font-weight:700;line-height:1;">11</div>
+          <div style="font-size:11px;color:#8A8A8A;font-weight:600;margin-top:2px;">Features</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── PREDICTOR GRID ── -->
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+    <!-- LEFT: FORM PANEL -->
+    <div class="lg:col-span-7 flex flex-col gap-5">
+
+      <!-- ── CARD 1: Personal Info ── -->
+      <div style="background:#fff;border:1.5px solid #DDDBD5;border-radius:20px;padding:28px;" class="hover-lift">
+        <div class="flex items-center justify-between mb-6">
+          <div class="flex items-center gap-3">
+            <div style="width:38px;height:38px;background:#EBF2ED;border-radius:10px;display:flex;align-items:center;justify-content:center;">
+              <span class="material-symbols-outlined" style="color:#3D5A47;font-size:20px;">person_pin</span>
+            </div>
+            <div>
+              <h2 style="font-size:15px;font-weight:700;margin:0;line-height:1.2;">Personal Information</h2>
+              <p style="font-size:12px;color:#8A8A8A;margin:0;">Applicant profile details</p>
+            </div>
+          </div>
+          <span style="background:#EAE7DF;color:#8A8A8A;font-size:11px;font-weight:700;padding:4px 10px;border-radius:99px;">Step 1 of 3</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+
+          <!-- Gender -->
+          <div>
+            <label style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#8A8A8A;display:block;margin-bottom:6px;">Gender</label>
+            <div class="pill-toggle" id="genderToggle">
+              <button class="pill-btn active" onclick="setPill('genderToggle',this,'gender','Male')">Male</button>
+              <button class="pill-btn" onclick="setPill('genderToggle',this,'gender','Female')">Female</button>
+            </div>
+            <input type="hidden" id="gender" value="Male"/>
+          </div>
+
+          <!-- Marital Status -->
+          <div>
+            <label style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#8A8A8A;display:block;margin-bottom:6px;">Marital Status</label>
+            <div class="pill-toggle" id="marriedToggle">
+              <button class="pill-btn active" onclick="setPill('marriedToggle',this,'married','Yes')">Married</button>
+              <button class="pill-btn" onclick="setPill('marriedToggle',this,'married','No')">Single</button>
+            </div>
+            <input type="hidden" id="married" value="Yes"/>
+          </div>
+
+          <!-- Dependents -->
+          <div>
+            <label style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#8A8A8A;display:block;margin-bottom:6px;">
+              Dependents &nbsp;<span style="color:#DDDBD5;">—</span>&nbsp;
+              <span id="depVal" style="color:#0D0E12;">0</span>
+            </label>
+            <input type="range" min="0" max="3" value="0" id="dependents" oninput="document.getElementById('depVal').textContent=this.value===this.max?'3+':this.value"/>
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:#8A8A8A;margin-top:4px;font-family:'DM Mono',monospace;">
+              <span>0</span><span>1</span><span>2</span><span>3+</span>
+            </div>
+          </div>
+
+          <!-- Education -->
+          <div>
+            <label style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#8A8A8A;display:block;margin-bottom:6px;">Education</label>
+            <div class="pill-toggle" id="eduToggle">
+              <button class="pill-btn active" onclick="setPill('eduToggle',this,'education','Graduate')">Graduate</button>
+              <button class="pill-btn" onclick="setPill('eduToggle',this,'education','Not Graduate')">Not Graduate</button>
+            </div>
+            <input type="hidden" id="education" value="Graduate"/>
+          </div>
+
+          <!-- Self Employed -->
+          <div>
+            <label style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#8A8A8A;display:block;margin-bottom:6px;">Employment Type</label>
+            <div class="pill-toggle" id="selfEmpToggle">
+              <button class="pill-btn active" onclick="setPill('selfEmpToggle',this,'selfEmployed','No')">Salaried</button>
+              <button class="pill-btn" onclick="setPill('selfEmpToggle',this,'selfEmployed','Yes')">Self Employed</button>
+            </div>
+            <input type="hidden" id="selfEmployed" value="No"/>
+          </div>
+
+          <!-- Property Area -->
+          <div>
+            <label style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#8A8A8A;display:block;margin-bottom:6px;">Property Area</label>
+            <select class="field-input" id="propertyArea">
+              <option value="Urban">Urban</option>
+              <option value="Semiurban">Semi-Urban</option>
+              <option value="Rural">Rural</option>
+            </select>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ── CARD 2: Financial Profile ── -->
+      <div style="background:#fff;border:1.5px solid #DDDBD5;border-radius:20px;padding:28px;" class="hover-lift">
+        <div class="flex items-center justify-between mb-6">
+          <div class="flex items-center gap-3">
+            <div style="width:38px;height:38px;background:#FDF3E3;border-radius:10px;display:flex;align-items:center;justify-content:center;">
+              <span class="material-symbols-outlined" style="color:#C97B2A;font-size:20px;">account_balance_wallet</span>
+            </div>
+            <div>
+              <h2 style="font-size:15px;font-weight:700;margin:0;line-height:1.2;">Financial Profile</h2>
+              <p style="font-size:12px;color:#8A8A8A;margin:0;">Income &amp; loan details</p>
+            </div>
+          </div>
+          <span style="background:#EAE7DF;color:#8A8A8A;font-size:11px;font-weight:700;padding:4px 10px;border-radius:99px;">Step 2 of 3</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+
+          <!-- Applicant Income -->
+          <div>
+            <label style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#8A8A8A;display:block;margin-bottom:6px;">
+              Applicant Income (₹/month)
+              <span class="tooltip-wrap" style="cursor:help;margin-left:4px;">
+                <span class="material-symbols-outlined" style="font-size:13px;color:#DDDBD5;vertical-align:middle;">info</span>
+                <span class="tooltip">Monthly gross income</span>
+              </span>
+            </label>
+            <div style="position:relative;">
+              <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:14px;color:#8A8A8A;font-weight:600;">₹</span>
+              <input type="number" class="field-input" id="applicantIncome" value="5000" min="0" style="padding-left:28px;" oninput="updateEMI()"/>
+            </div>
+          </div>
+
+          <!-- Co-Applicant Income -->
+          <div>
+            <label style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#8A8A8A;display:block;margin-bottom:6px;">Co-Applicant Income (₹/month)</label>
+            <div style="position:relative;">
+              <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:14px;color:#8A8A8A;font-weight:600;">₹</span>
+              <input type="number" class="field-input" id="coapplicantIncome" value="0" min="0" style="padding-left:28px;" oninput="updateEMI()"/>
+            </div>
+          </div>
+
+          <!-- Loan Amount -->
+          <div>
+            <label style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#8A8A8A;display:block;margin-bottom:6px;">
+              Loan Amount (₹ Thousands)
+              <span id="loanDisplay" style="color:#C97B2A;font-weight:700;font-family:'DM Mono',monospace;">150K</span>
+            </label>
+            <input type="range" min="50" max="700" value="150" step="10" id="loanAmount" oninput="document.getElementById('loanDisplay').textContent=this.value+'K';updateEMI()"/>
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:#8A8A8A;margin-top:4px;font-family:'DM Mono',monospace;">
+              <span>₹50K</span><span>₹350K</span><span>₹700K</span>
+            </div>
+          </div>
+
+          <!-- Loan Term -->
+          <div>
+            <label style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#8A8A8A;display:block;margin-bottom:6px;">
+              Loan Term
+              <span id="termDisplay" style="color:#C97B2A;font-weight:700;font-family:'DM Mono',monospace;">360 days</span>
+            </label>
+            <select class="field-input" id="loanAmountTerm" onchange="document.getElementById('termDisplay').textContent=this.value+' days';updateEMI()">
+              <option value="360" selected>360 days (30 years)</option>
+              <option value="300">300 days (25 years)</option>
+              <option value="240">240 days (20 years)</option>
+              <option value="180">180 days (15 years)</option>
+              <option value="120">120 days (10 years)</option>
+              <option value="84">84 days (7 years)</option>
+              <option value="60">60 days (5 years)</option>
+              <option value="36">36 days (3 years)</option>
+              <option value="12">12 days (1 year)</option>
+            </select>
+          </div>
+
+        </div>
+
+        <!-- Live EMI Calculator -->
+        <div style="margin-top:20px;background:#F5F3EE;border-radius:14px;padding:16px;" id="emiBox">
+          <div style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#8A8A8A;margin-bottom:10px;">Live Financial Snapshot</div>
+          <div class="grid grid-cols-3 gap-3">
+            <div class="text-center">
+              <div style="font-family:'Fraunces',serif;font-size:20px;font-weight:700;" id="dtiRatio">42%</div>
+              <div style="font-size:11px;color:#8A8A8A;font-weight:600;">DTI Ratio</div>
+            </div>
+            <div class="text-center">
+              <div style="font-family:'Fraunces',serif;font-size:20px;font-weight:700;color:#3D5A47;" id="emiAmt">₹3.2K</div>
+              <div style="font-size:11px;color:#8A8A8A;font-weight:600;">Est. EMI/mo</div>
+            </div>
+            <div class="text-center">
+              <div style="font-family:'Fraunces',serif;font-size:20px;font-weight:700;" id="incomeRatio">3.1x</div>
+              <div style="font-size:11px;color:#8A8A8A;font-weight:600;">Income Ratio</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── CARD 3: Credit & Risk ── -->
+      <div style="background:#fff;border:1.5px solid #DDDBD5;border-radius:20px;padding:28px;" class="hover-lift">
+        <div class="flex items-center justify-between mb-6">
+          <div class="flex items-center gap-3">
+            <div style="width:38px;height:38px;background:#FDECEA;border-radius:10px;display:flex;align-items:center;justify-content:center;">
+              <span class="material-symbols-outlined" style="color:#C0392B;font-size:20px;">shield_with_heart</span>
+            </div>
+            <div>
+              <h2 style="font-size:15px;font-weight:700;margin:0;line-height:1.2;">Credit &amp; Risk Profile</h2>
+              <p style="font-size:12px;color:#8A8A8A;margin:0;">The most important factor</p>
+            </div>
+          </div>
+          <span style="background:#EAE7DF;color:#8A8A8A;font-size:11px;font-weight:700;padding:4px 10px;border-radius:99px;">Step 3 of 3</span>
+        </div>
+
+        <!-- Credit History Big Toggle -->
+        <div style="margin-bottom:20px;">
+          <label style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#8A8A8A;display:block;margin-bottom:8px;">Credit History</label>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div id="creditGood" onclick="selectCredit(1)" style="background:#EBF2ED;border:2px solid #3D5A47;border-radius:14px;padding:16px;cursor:pointer;transition:all 0.2s;text-align:center;">
+              <span class="material-symbols-outlined filled" style="color:#3D5A47;font-size:28px;display:block;margin:0 auto 6px;">verified</span>
+              <div style="font-size:14px;font-weight:700;color:#3D5A47;">Good Credit</div>
+              <div style="font-size:11px;color:#6B9E7A;margin-top:2px;">No defaults (1.0)</div>
+            </div>
+            <div id="creditPoor" onclick="selectCredit(0)" style="background:#fff;border:2px solid #DDDBD5;border-radius:14px;padding:16px;cursor:pointer;transition:all 0.2s;text-align:center;">
+              <span class="material-symbols-outlined" style="color:#8A8A8A;font-size:28px;display:block;margin:0 auto 6px;">report</span>
+              <div style="font-size:14px;font-weight:700;color:#8A8A8A;">Poor Credit</div>
+              <div style="font-size:11px;color:#8A8A8A;margin-top:2px;">Has defaults (0.0)</div>
+            </div>
+          </div>
+          <input type="hidden" id="creditHistory" value="1"/>
+        </div>
+
+        <!-- Credit Score Visual -->
+        <div style="background:#F5F3EE;border-radius:14px;padding:16px;margin-bottom:20px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+            <span style="font-size:12px;font-weight:700;color:#8A8A8A;">Credit Impact Score</span>
+            <span id="creditScoreLabel" style="font-size:12px;font-weight:700;color:#3D5A47;">Excellent</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill" id="creditScoreBar" style="width:85%;background:linear-gradient(90deg,#3D5A47,#6B9E7A);"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-top:4px;font-size:10px;color:#8A8A8A;font-family:'DM Mono',monospace;">
+            <span>Poor</span><span>Fair</span><span>Good</span><span>Excellent</span>
+          </div>
+        </div>
+
+        <!-- Model Selector -->
+        <div>
+          <label style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#8A8A8A;display:block;margin-bottom:8px;">Prediction Model</label>
+          <div class="grid grid-cols-3 gap-2" id="modelSelector">
+            <div class="model-option" data-model="rf" onclick="selectModel(this)" style="background:#F0EEF8;border:2px solid #5A3D8A;border-radius:12px;padding:12px 8px;cursor:pointer;transition:all 0.2s;text-align:center;">
+              <span class="material-symbols-outlined" style="font-size:22px;color:#5A3D8A;display:block;margin:0 auto 4px;">forest</span>
+              <div style="font-size:11px;font-weight:700;color:#5A3D8A;">Random<br/>Forest</div>
+              <div style="font-size:10px;color:#8A8A8A;margin-top:3px;font-family:'DM Mono',monospace;">~85%</div>
+            </div>
+            <div class="model-option" data-model="lr" onclick="selectModel(this)" style="background:#fff;border:2px solid #DDDBD5;border-radius:12px;padding:12px 8px;cursor:pointer;transition:all 0.2s;text-align:center;">
+              <span class="material-symbols-outlined" style="font-size:22px;color:#8A8A8A;display:block;margin:0 auto 4px;">linear_scale</span>
+              <div style="font-size:11px;font-weight:700;color:#8A8A8A;">Logistic<br/>Regression</div>
+              <div style="font-size:10px;color:#8A8A8A;margin-top:3px;font-family:'DM Mono',monospace;">~82%</div>
+            </div>
+            <div class="model-option" data-model="dt" onclick="selectModel(this)" style="background:#fff;border:2px solid #DDDBD5;border-radius:12px;padding:12px 8px;cursor:pointer;transition:all 0.2s;text-align:center;">
+              <span class="material-symbols-outlined" style="font-size:22px;color:#8A8A8A;display:block;margin:0 auto 4px;">account_tree</span>
+              <div style="font-size:11px;font-weight:700;color:#8A8A8A;">Decision<br/>Tree</div>
+              <div style="font-size:10px;color:#8A8A8A;margin-top:3px;font-family:'DM Mono',monospace;">~76%</div>
+            </div>
+          </div>
+          <input type="hidden" id="selectedModel" value="rf"/>
+        </div>
+
+        <!-- Predict Button -->
+        <button onclick="runPrediction()" id="predictBtn"
+          style="width:100%;margin-top:24px;padding:16px;background:#0D0E12;color:#F5F3EE;border:none;border-radius:14px;font-family:'Bricolage Grotesque',sans-serif;font-size:15px;font-weight:700;letter-spacing:0.02em;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:all 0.2s;"
+          onmouseover="this.style.background='#3D5A47'" onmouseout="this.style.background='#0D0E12'">
+          <span class="material-symbols-outlined filled" style="font-size:20px;color:inherit;">bolt</span>
+          Generate Prediction
+        </button>
+      </div>
+    </div><!-- END LEFT -->
+
+    <!-- RIGHT: RESULTS PANEL -->
+    <div class="lg:col-span-5 flex flex-col gap-5">
+
+      <!-- ── DEFAULT STATE ── -->
+      <div id="defaultState" style="background:#fff;border:1.5px solid #DDDBD5;border-radius:20px;padding:32px;text-align:center;">
+        <div style="width:80px;height:80px;background:#EAE7DF;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+          <span class="material-symbols-outlined" style="font-size:40px;color:#8A8A8A;">home_work</span>
+        </div>
+        <h3 style="font-size:18px;font-weight:700;margin:0 0 8px;font-family:'Fraunces',serif;">Your result will appear here</h3>
+        <p style="font-size:13px;color:#8A8A8A;margin:0 0 20px;line-height:1.6;">Fill in the applicant details on the left, then click <strong>Generate Prediction</strong>.</p>
+        <!-- Feature Importance Preview -->
+        <div style="background:#F5F3EE;border-radius:14px;padding:16px;text-align:left;">
+          <div style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#8A8A8A;margin-bottom:12px;">Top Feature Importances (RF)</div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <div>
+              <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:600;margin-bottom:4px;"><span>Credit History</span><span style="font-family:'DM Mono',monospace;color:#3D5A47;">36.2%</span></div>
+              <div class="factor-bar"><div class="factor-fill" style="width:85%;background:#3D5A47;"></div></div>
+            </div>
+            <div>
+              <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:600;margin-bottom:4px;"><span>Loan Amount</span><span style="font-family:'DM Mono',monospace;color:#C97B2A;">18.4%</span></div>
+              <div class="factor-bar"><div class="factor-fill" style="width:43%;background:#C97B2A;"></div></div>
+            </div>
+            <div>
+              <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:600;margin-bottom:4px;"><span>Applicant Income</span><span style="font-family:'DM Mono',monospace;color:#5A3D8A;">15.1%</span></div>
+              <div class="factor-bar"><div class="factor-fill" style="width:35%;background:#5A3D8A;"></div></div>
+            </div>
+            <div>
+              <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:600;margin-bottom:4px;"><span>Loan Term</span><span style="font-family:'DM Mono',monospace;color:#C0392B;">12.3%</span></div>
+              <div class="factor-bar"><div class="factor-fill" style="width:29%;background:#C0392B;"></div></div>
+            </div>
+            <div>
+              <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:600;margin-bottom:4px;"><span>Property Area</span><span style="font-family:'DM Mono',monospace;color:#8A8A8A;">8.9%</span></div>
+              <div class="factor-bar"><div class="factor-fill" style="width:21%;background:#8A8A8A;"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── RESULT STATE (hidden by default) ── -->
+      <div id="resultState" style="display:none;">
+
+        <!-- Main result card -->
+        <div id="resultCard" style="border-radius:20px;padding:28px;margin-bottom:20px;position:relative;overflow:hidden;">
+          <!-- BG pattern in result card -->
+          <div style="position:absolute;inset:0;opacity:0.05;background-image:radial-gradient(circle at 20% 20%, #fff 1px, transparent 1px),radial-gradient(circle at 80% 80%, #fff 1px, transparent 1px);background-size:30px 30px;pointer-events:none;"></div>
+          <div style="position:relative;z-index:1;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;">
+              <div>
+                <div id="resultBadge" style="display:inline-block;margin-bottom:8px;"></div>
+                <h2 id="resultTitle" style="font-family:'Fraunces',serif;font-size:40px;font-weight:900;margin:0;line-height:1;letter-spacing:-0.03em;"></h2>
+                <p id="resultSubtitle" style="font-size:13px;margin:6px 0 0;opacity:0.8;"></p>
+              </div>
+              <div id="resultIcon" style="width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;"></div>
+            </div>
+
+            <!-- Confidence Score -->
+            <div style="margin-bottom:16px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                <span id="confLabel" style="font-size:12px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;opacity:0.8;">Confidence Score</span>
+                <span id="confScore" style="font-family:'Fraunces',serif;font-size:28px;font-weight:900;line-height:1;"></span>
+              </div>
+              <div class="progress-bar" style="background:rgba(255,255,255,0.3);">
+                <div class="progress-fill" id="confBar" style="width:0%;"></div>
+              </div>
+            </div>
+
+            <!-- Model Used -->
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;" id="modelUsedBadges"></div>
+
+            <!-- Quote -->
+            <div id="resultQuote" style="border-top:1px solid rgba(255,255,255,0.2);padding-top:14px;font-size:13px;line-height:1.6;opacity:0.85;font-style:italic;"></div>
+          </div>
+        </div>
+
+        <!-- ── Risk Factors Card ── -->
+        <div style="background:#fff;border:1.5px solid #DDDBD5;border-radius:20px;padding:24px;margin-bottom:20px;" class="result-appear" id="riskCard">
+          <div class="flex items-center gap-2 mb-4">
+            <span class="material-symbols-outlined" style="color:#3D5A47;font-size:18px;">analytics</span>
+            <h3 style="font-size:14px;font-weight:700;margin:0;text-transform:uppercase;letter-spacing:0.04em;">Risk Factor Analysis</h3>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px;" id="riskFactors"></div>
+        </div>
+
+        <!-- ── All Models Comparison ── -->
+        <div style="background:#fff;border:1.5px solid #DDDBD5;border-radius:20px;padding:24px;margin-bottom:20px;" class="result-appear" id="modelsCard">
+          <div class="flex items-center gap-2 mb-4">
+            <span class="material-symbols-outlined" style="color:#C97B2A;font-size:18px;">psychology</span>
+            <h3 style="font-size:14px;font-weight:700;margin:0;text-transform:uppercase;letter-spacing:0.04em;">All Models Verdict</h3>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;" id="allModelResults"></div>
+        </div>
+
+        <!-- ── Application Summary ── -->
+        <div style="background:#F5F3EE;border:1.5px solid #DDDBD5;border-radius:20px;padding:24px;" class="result-appear">
+          <div class="flex items-center gap-2 mb-4">
+            <span class="material-symbols-outlined" style="color:#8A8A8A;font-size:18px;">receipt_long</span>
+            <h3 style="font-size:14px;font-weight:700;margin:0;text-transform:uppercase;letter-spacing:0.04em;">Application Summary</h3>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;" id="appSummary"></div>
+          <button onclick="resetForm()" style="width:100%;margin-top:16px;padding:12px;background:#fff;border:1.5px solid #DDDBD5;border-radius:10px;font-family:'Bricolage Grotesque',sans-serif;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all 0.2s;color:#0D0E12;"
+            onmouseover="this.style.background='#EAE7DF'" onmouseout="this.style.background='#fff'">
+            <span class="material-symbols-outlined" style="font-size:16px;">refresh</span> New Application
+          </button>
+        </div>
+
+      </div><!-- END resultState -->
+
+    </div><!-- END RIGHT -->
+  </div><!-- END GRID -->
+
+  <!-- ═══════════════════════════════════════════════════════════
+       ANALYSIS SECTION
+  ═══════════════════════════════════════════════════════════ -->
+  <section id="analysis" style="padding:60px 0 40px;">
+    <div class="section-divider" style="margin-bottom:40px;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:32px;height:32px;background:#0D0E12;border-radius:8px;display:flex;align-items:center;justify-content:center;">
+          <span class="material-symbols-outlined" style="color:#F5F3EE;font-size:16px;">query_stats</span>
+        </div>
+        <span style="font-size:13px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;white-space:nowrap;">Dataset Analysis</span>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+      <!-- Stat Cards -->
+      <div style="background:#0D0E12;color:#F5F3EE;border-radius:18px;padding:24px;" class="hover-lift">
+        <span class="material-symbols-outlined" style="color:#6B9E7A;font-size:24px;margin-bottom:8px;display:block;">dataset</span>
+        <div style="font-family:'Fraunces',serif;font-size:36px;font-weight:900;line-height:1;margin-bottom:4px;">614</div>
+        <div style="font-size:12px;color:#8A8A8A;font-weight:600;">Total Records</div>
+        <div style="font-size:11px;color:#6B9E7A;margin-top:8px;font-family:'DM Mono',monospace;">Kaggle Home Loan Dataset</div>
+      </div>
+      <div style="background:#3D5A47;color:#F5F3EE;border-radius:18px;padding:24px;" class="hover-lift">
+        <span class="material-symbols-outlined filled" style="color:#EBF2ED;font-size:24px;margin-bottom:8px;display:block;">check_circle</span>
+        <div style="font-family:'Fraunces',serif;font-size:36px;font-weight:900;line-height:1;margin-bottom:4px;">422</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.7);font-weight:600;">Approved Applications</div>
+        <div style="font-size:11px;color:#6B9E7A;margin-top:8px;font-family:'DM Mono',monospace;">68.7% approval rate</div>
+      </div>
+      <div style="background:#fff;border:1.5px solid #DDDBD5;border-radius:18px;padding:24px;" class="hover-lift">
+        <span class="material-symbols-outlined" style="color:#C0392B;font-size:24px;margin-bottom:8px;display:block;">cancel</span>
+        <div style="font-family:'Fraunces',serif;font-size:36px;font-weight:900;line-height:1;margin-bottom:4px;">192</div>
+        <div style="font-size:12px;color:#8A8A8A;font-weight:600;">Rejected Applications</div>
+        <div style="font-size:11px;color:#C0392B;margin-top:8px;font-family:'DM Mono',monospace;">31.3% rejection rate</div>
+      </div>
+      <div style="background:#FDF3E3;border:1.5px solid #F0D9B5;border-radius:18px;padding:24px;" class="hover-lift">
+        <span class="material-symbols-outlined" style="color:#C97B2A;font-size:24px;margin-bottom:8px;display:block;">straighten</span>
+        <div style="font-family:'Fraunces',serif;font-size:36px;font-weight:900;line-height:1;margin-bottom:4px;">11</div>
+        <div style="font-size:12px;color:#8A8A8A;font-weight:600;">Input Features</div>
+        <div style="font-size:11px;color:#C97B2A;margin-top:8px;font-family:'DM Mono',monospace;">After preprocessing</div>
+      </div>
+    </div>
+
+    <!-- Feature Distribution Chart -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      <!-- Approval by Credit History -->
+      <div style="background:#fff;border:1.5px solid #DDDBD5;border-radius:20px;padding:24px;">
+        <h3 style="font-size:14px;font-weight:700;margin:0 0 16px;text-transform:uppercase;letter-spacing:0.04em;">Approval Rate by Credit History</h3>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <div>
+            <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:600;margin-bottom:6px;">
+              <span>Good Credit (1.0)</span><span style="font-family:'DM Mono',monospace;color:#3D5A47;">79.6%</span>
+            </div>
+            <div class="progress-bar" style="height:10px;">
+              <div class="progress-fill" style="width:79.6%;background:#3D5A47;"></div>
+            </div>
+          </div>
+          <div>
+            <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:600;margin-bottom:6px;">
+              <span>Poor Credit (0.0)</span><span style="font-family:'DM Mono',monospace;color:#C0392B;">7.7%</span>
+            </div>
+            <div class="progress-bar" style="height:10px;">
+              <div class="progress-fill" style="width:7.7%;background:#C0392B;"></div>
+            </div>
+          </div>
+          <div style="background:#EBF2ED;border-radius:10px;padding:12px;margin-top:4px;">
+            <p style="font-size:12px;color:#3D5A47;font-weight:600;margin:0;">
+              Credit history is the <strong>#1 predictor</strong> — applicants with good credit are 10x more likely to get approved.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Approval by Property Area -->
+      <div style="background:#fff;border:1.5px solid #DDDBD5;border-radius:20px;padding:24px;">
+        <h3 style="font-size:14px;font-weight:700;margin:0 0 16px;text-transform:uppercase;letter-spacing:0.04em;">Approval Rate by Property Area</h3>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <div>
+            <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:600;margin-bottom:6px;">
+              <span>Semi-Urban</span><span style="font-family:'DM Mono',monospace;color:#3D5A47;">76.1%</span>
+            </div>
+            <div class="progress-bar" style="height:10px;">
+              <div class="progress-fill" style="width:76.1%;background:#3D5A47;"></div>
+            </div>
+          </div>
+          <div>
+            <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:600;margin-bottom:6px;">
+              <span>Urban</span><span style="font-family:'DM Mono',monospace;color:#C97B2A;">67.9%</span>
+            </div>
+            <div class="progress-bar" style="height:10px;">
+              <div class="progress-fill" style="width:67.9%;background:#C97B2A;"></div>
+            </div>
+          </div>
+          <div>
+            <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:600;margin-bottom:6px;">
+              <span>Rural</span><span style="font-family:'DM Mono',monospace;color:#8A8A8A;">61.3%</span>
+            </div>
+            <div class="progress-bar" style="height:10px;">
+              <div class="progress-fill" style="width:61.3%;background:#8A8A8A;"></div>
+            </div>
+          </div>
+          <div style="background:#FDF3E3;border-radius:10px;padding:12px;margin-top:4px;">
+            <p style="font-size:12px;color:#C97B2A;font-weight:600;margin:0;">
+              Semi-urban properties have the highest approval rate, likely due to lower property prices and better income ratios.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Approval by Education -->
+      <div style="background:#fff;border:1.5px solid #DDDBD5;border-radius:20px;padding:24px;">
+        <h3 style="font-size:14px;font-weight:700;margin:0 0 16px;text-transform:uppercase;letter-spacing:0.04em;">Approval by Education &amp; Employment</h3>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div style="background:#EBF2ED;border-radius:14px;padding:16px;text-align:center;">
+            <div style="font-family:'Fraunces',serif;font-size:28px;font-weight:900;color:#3D5A47;line-height:1;margin-bottom:4px;">71.4%</div>
+            <div style="font-size:12px;color:#6B9E7A;font-weight:600;">Graduates</div>
+          </div>
+          <div style="background:#EAE7DF;border-radius:14px;padding:16px;text-align:center;">
+            <div style="font-family:'Fraunces',serif;font-size:28px;font-weight:900;color:#8A8A8A;line-height:1;margin-bottom:4px;">61.5%</div>
+            <div style="font-size:12px;color:#8A8A8A;font-weight:600;">Non-Graduates</div>
+          </div>
+          <div style="background:#EAE7DF;border-radius:14px;padding:16px;text-align:center;">
+            <div style="font-family:'Fraunces',serif;font-size:28px;font-weight:900;color:#8A8A8A;line-height:1;margin-bottom:4px;">59.3%</div>
+            <div style="font-size:12px;color:#8A8A8A;font-weight:600;">Self-Employed</div>
+          </div>
+          <div style="background:#FDF3E3;border-radius:14px;padding:16px;text-align:center;">
+            <div style="font-family:'Fraunces',serif;font-size:28px;font-weight:900;color:#C97B2A;line-height:1;margin-bottom:4px;">70.1%</div>
+            <div style="font-size:12px;color:#C97B2A;font-weight:600;">Salaried</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Missing Values -->
+      <div style="background:#fff;border:1.5px solid #DDDBD5;border-radius:20px;padding:24px;">
+        <h3 style="font-size:14px;font-weight:700;margin:0 0 16px;text-transform:uppercase;letter-spacing:0.04em;">Missing Values (Pre-Imputation)</h3>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div>
+            <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:600;margin-bottom:5px;">
+              <span>Self_Employed</span><span style="font-family:'DM Mono',monospace;color:#C0392B;">5.2%</span>
+            </div>
+            <div class="factor-bar"><div class="factor-fill" style="width:52%;background:#C0392B;"></div></div>
+          </div>
+          <div>
+            <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:600;margin-bottom:5px;">
+              <span>Credit_History</span><span style="font-family:'DM Mono',monospace;color:#C0392B;">8.1%</span>
+            </div>
+            <div class="factor-bar"><div class="factor-fill" style="width:81%;background:#C0392B;"></div></div>
+          </div>
+          <div>
+            <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:600;margin-bottom:5px;">
+              <span>Dependents</span><span style="font-family:'DM Mono',monospace;color:#C97B2A;">2.6%</span>
+            </div>
+            <div class="factor-bar"><div class="factor-fill" style="width:26%;background:#C97B2A;"></div></div>
+          </div>
+          <div>
+            <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:600;margin-bottom:5px;">
+              <span>Loan_Amount</span><span style="font-family:'DM Mono',monospace;color:#C97B2A;">3.6%</span>
+            </div>
+            <div class="factor-bar"><div class="factor-fill" style="width:36%;background:#C97B2A;"></div></div>
+          </div>
+          <div style="background:#EBF2ED;border-radius:10px;padding:10px;margin-top:4px;">
+            <p style="font-size:11px;color:#3D5A47;font-weight:600;margin:0;">Handled via mode/median imputation (SimpleImputer)</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       MODELS SECTION
+  ═══════════════════════════════════════════════════════════ -->
+  <section id="models" style="padding:0 0 60px;">
+    <div class="section-divider" style="margin-bottom:40px;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:32px;height:32px;background:#3D5A47;border-radius:8px;display:flex;align-items:center;justify-content:center;">
+          <span class="material-symbols-outlined" style="color:#F5F3EE;font-size:16px;">psychology</span>
+        </div>
+        <span style="font-size:13px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;white-space:nowrap;">Model Performance</span>
+      </div>
+    </div>
+
+    <!-- Model Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
+
+      <!-- Random Forest -->
+      <div style="background:#0D0E12;color:#F5F3EE;border-radius:20px;padding:24px;position:relative;overflow:hidden;" class="hover-lift">
+        <div style="position:absolute;top:-20px;right:-20px;width:100px;height:100px;background:#3D5A47;border-radius:50%;opacity:0.15;"></div>
+        <div style="position:relative;z-index:1;">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
+            <div>
+              <span style="background:#EBF2ED;color:#3D5A47;font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;padding:3px 8px;border-radius:99px;">Best Model</span>
+              <h3 style="font-family:'Fraunces',serif;font-size:22px;font-weight:700;margin:8px 0 0;letter-spacing:-0.02em;">Random Forest</h3>
+            </div>
+            <span class="material-symbols-outlined filled" style="color:#6B9E7A;font-size:32px;">forest</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;">
+            <div style="background:rgba(255,255,255,0.08);border-radius:10px;padding:12px;text-align:center;">
+              <div style="font-family:'Fraunces',serif;font-size:22px;font-weight:900;color:#6B9E7A;line-height:1;">85.1%</div>
+              <div style="font-size:10px;color:#8A8A8A;font-weight:600;margin-top:2px;">Accuracy</div>
+            </div>
+            <div style="background:rgba(255,255,255,0.08);border-radius:10px;padding:12px;text-align:center;">
+              <div style="font-family:'Fraunces',serif;font-size:22px;font-weight:900;color:#6B9E7A;line-height:1;">0.892</div>
+              <div style="font-size:10px;color:#8A8A8A;font-weight:600;margin-top:2px;">AUC-ROC</div>
+            </div>
+            <div style="background:rgba(255,255,255,0.08);border-radius:10px;padding:12px;text-align:center;">
+              <div style="font-family:'Fraunces',serif;font-size:22px;font-weight:900;color:#6B9E7A;line-height:1;">84.7%</div>
+              <div style="font-size:10px;color:#8A8A8A;font-weight:600;margin-top:2px;">F1 Score</div>
+            </div>
+            <div style="background:rgba(255,255,255,0.08);border-radius:10px;padding:12px;text-align:center;">
+              <div style="font-family:'Fraunces',serif;font-size:22px;font-weight:900;color:#6B9E7A;line-height:1;">83.9%</div>
+              <div style="font-size:10px;color:#8A8A8A;font-weight:600;margin-top:2px;">CV Mean</div>
+            </div>
+          </div>
+          <div style="background:rgba(255,255,255,0.06);border-radius:10px;padding:10px;">
+            <p style="font-size:11px;color:#8A8A8A;margin:0;line-height:1.5;">100 estimators, handles overfitting well. Best overall performance across all metrics.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Logistic Regression -->
+      <div style="background:#fff;border:1.5px solid #DDDBD5;border-radius:20px;padding:24px;" class="hover-lift">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
+          <div>
+            <span style="background:#EBF2ED;color:#3D5A47;font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;padding:3px 8px;border-radius:99px;">Baseline</span>
+            <h3 style="font-family:'Fraunces',serif;font-size:22px;font-weight:700;margin:8px 0 0;letter-spacing:-0.02em;">Logistic Regression</h3>
+          </div>
+          <span class="material-symbols-outlined" style="color:#3D5A47;font-size:32px;">linear_scale</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;">
+          <div style="background:#F5F3EE;border-radius:10px;padding:12px;text-align:center;">
+            <div style="font-family:'Fraunces',serif;font-size:22px;font-weight:900;color:#3D5A47;line-height:1;">82.4%</div>
+            <div style="font-size:10px;color:#8A8A8A;font-weight:600;margin-top:2px;">Accuracy</div>
+          </div>
+          <div style="background:#F5F3EE;border-radius:10px;padding:12px;text-align:center;">
+            <div style="font-family:'Fraunces',serif;font-size:22px;font-weight:900;color:#3D5A47;line-height:1;">0.866</div>
+            <div style="font-size:10px;color:#8A8A8A;font-weight:600;margin-top:2px;">AUC-ROC</div>
+          </div>
+          <div style="background:#F5F3EE;border-radius:10px;padding:12px;text-align:center;">
+            <div style="font-family:'Fraunces',serif;font-size:22px;font-weight:900;color:#3D5A47;line-height:1;">82.1%</div>
+            <div style="font-size:10px;color:#8A8A8A;font-weight:600;margin-top:2px;">F1 Score</div>
+          </div>
+          <div style="background:#F5F3EE;border-radius:10px;padding:12px;text-align:center;">
+            <div style="font-family:'Fraunces',serif;font-size:22px;font-weight:900;color:#3D5A47;line-height:1;">81.6%</div>
+            <div style="font-size:10px;color:#8A8A8A;font-weight:600;margin-top:2px;">CV Mean</div>
+          </div>
+        </div>
+        <div style="background:#F5F3EE;border-radius:10px;padding:10px;">
+          <p style="font-size:11px;color:#8A8A8A;margin:0;line-height:1.5;">Requires StandardScaler. Fast, interpretable, performs well on this dataset.</p>
+        </div>
+      </div>
+
+      <!-- Decision Tree -->
+      <div style="background:#fff;border:1.5px solid #DDDBD5;border-radius:20px;padding:24px;" class="hover-lift">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
+          <div>
+            <span style="background:#FDF3E3;color:#C97B2A;font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;padding:3px 8px;border-radius:99px;">Explainable</span>
+            <h3 style="font-family:'Fraunces',serif;font-size:22px;font-weight:700;margin:8px 0 0;letter-spacing:-0.02em;">Decision Tree</h3>
+          </div>
+          <span class="material-symbols-outlined" style="color:#C97B2A;font-size:32px;">account_tree</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;">
+          <div style="background:#F5F3EE;border-radius:10px;padding:12px;text-align:center;">
+            <div style="font-family:'Fraunces',serif;font-size:22px;font-weight:900;color:#C97B2A;line-height:1;">76.2%</div>
+            <div style="font-size:10px;color:#8A8A8A;font-weight:600;margin-top:2px;">Accuracy</div>
+          </div>
+          <div style="background:#F5F3EE;border-radius:10px;padding:12px;text-align:center;">
+            <div style="font-family:'Fraunces',serif;font-size:22px;font-weight:900;color:#C97B2A;line-height:1;">0.741</div>
+            <div style="font-size:10px;color:#8A8A8A;font-weight:600;margin-top:2px;">AUC-ROC</div>
+          </div>
+          <div style="background:#F5F3EE;border-radius:10px;padding:12px;text-align:center;">
+            <div style="font-family:'Fraunces',serif;font-size:22px;font-weight:900;color:#C97B2A;line-height:1;">75.9%</div>
+            <div style="font-size:10px;color:#8A8A8A;font-weight:600;margin-top:2px;">F1 Score</div>
+          </div>
+          <div style="background:#F5F3EE;border-radius:10px;padding:12px;text-align:center;">
+            <div style="font-family:'Fraunces',serif;font-size:22px;font-weight:900;color:#C97B2A;line-height:1;">75.1%</div>
+            <div style="font-size:10px;color:#8A8A8A;font-weight:600;margin-top:2px;">CV Mean</div>
+          </div>
+        </div>
+        <div style="background:#F5F3EE;border-radius:10px;padding:10px;">
+          <p style="font-size:11px;color:#8A8A8A;margin:0;line-height:1.5;">Prone to overfitting. Highly interpretable — rules can be visualized with plot_tree.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Workflow Steps -->
+    <div style="background:#fff;border:1.5px solid #DDDBD5;border-radius:20px;padding:28px;">
+      <h3 style="font-size:14px;font-weight:700;margin:0 0 20px;text-transform:uppercase;letter-spacing:0.04em;">ML Workflow — 8 Steps</h3>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div style="display:flex;align-items:flex-start;gap:12px;padding:12px;background:#F5F3EE;border-radius:12px;">
+          <div class="step-num">01</div>
+          <div><div style="font-size:13px;font-weight:700;margin-bottom:2px;">Data Collection</div><div style="font-size:12px;color:#8A8A8A;">Kaggle Home Loan Dataset via KaggleHub API</div></div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:12px;padding:12px;background:#F5F3EE;border-radius:12px;">
+          <div class="step-num">02</div>
+          <div><div style="font-size:13px;font-weight:700;margin-bottom:2px;">EDA</div><div style="font-size:12px;color:#8A8A8A;">Distribution plots, correlations, missing value analysis</div></div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:12px;padding:12px;background:#F5F3EE;border-radius:12px;">
+          <div class="step-num">03</div>
+          <div><div style="font-size:13px;font-weight:700;margin-bottom:2px;">Preprocessing</div><div style="font-size:12px;color:#8A8A8A;">SimpleImputer (mode/median), LabelEncoder</div></div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:12px;padding:12px;background:#F5F3EE;border-radius:12px;">
+          <div class="step-num">04</div>
+          <div><div style="font-size:13px;font-weight:700;margin-bottom:2px;">Feature Scaling</div><div style="font-size:12px;color:#8A8A8A;">StandardScaler applied for Logistic Regression</div></div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:12px;padding:12px;background:#EBF2ED;border-radius:12px;">
+          <div class="step-num" style="background:#3D5A47;">05</div>
+          <div><div style="font-size:13px;font-weight:700;margin-bottom:2px;">Model Training</div><div style="font-size:12px;color:#8A8A8A;">LR, Decision Tree, Random Forest on 80/20 split</div></div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:12px;padding:12px;background:#EBF2ED;border-radius:12px;">
+          <div class="step-num" style="background:#3D5A47;">06</div>
+          <div><div style="font-size:13px;font-weight:700;margin-bottom:2px;">Evaluation</div><div style="font-size:12px;color:#8A8A8A;">Accuracy, Precision, Recall, F1, AUC-ROC, Confusion Matrix</div></div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:12px;padding:12px;background:#EBF2ED;border-radius:12px;">
+          <div class="step-num" style="background:#3D5A47;">07</div>
+          <div><div style="font-size:13px;font-weight:700;margin-bottom:2px;">Cross-Validation</div><div style="font-size:12px;color:#8A8A8A;">5-Fold StratifiedKFold for generalization check</div></div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:12px;padding:12px;background:#EBF2ED;border-radius:12px;">
+          <div class="step-num" style="background:#3D5A47;">08</div>
+          <div><div style="font-size:13px;font-weight:700;margin-bottom:2px;">Prediction</div><div style="font-size:12px;color:#8A8A8A;">Real-time inference on new applicant data</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main><!-- END MAIN -->
+
+<!-- ═══════════════════════════════════════════════════════════
+     BOTTOM NAV (MOBILE)
+═══════════════════════════════════════════════════════════ -->
+<nav class="fixed bottom-0 left-0 w-full z-50 hide-desktop" style="background:rgba(245,243,238,0.92);backdrop-filter:blur(20px);border-top:1.5px solid #DDDBD5;padding:8px 16px 12px;">
+  <div style="display:flex;justify-content:space-around;align-items:center;">
+    <div class="bottom-nav-item active" onclick="scrollToSection('predictor')">
+      <span class="material-symbols-outlined filled" style="font-size:22px;color:#3D5A47;">tune</span>
+      <span style="font-size:10px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#3D5A47;">Predict</span>
+    </div>
+    <div class="bottom-nav-item" onclick="scrollToSection('analysis')">
+      <span class="material-symbols-outlined" style="font-size:22px;color:#8A8A8A;">query_stats</span>
+      <span style="font-size:10px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8A8A8A;">Analysis</span>
+    </div>
+    <div class="bottom-nav-item" onclick="scrollToSection('models')">
+      <span class="material-symbols-outlined" style="font-size:22px;color:#8A8A8A;">psychology</span>
+      <span style="font-size:10px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8A8A8A;">Models</span>
+    </div>
+    <div class="bottom-nav-item" onclick="scrollToTop()">
+      <span class="material-symbols-outlined" style="font-size:22px;color:#8A8A8A;">expand_less</span>
+      <span style="font-size:10px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8A8A8A;">Top</span>
+    </div>
+  </div>
+</nav>
+
+<!-- ═══════════════════════════════════════════════════════════
+     JAVASCRIPT
+═══════════════════════════════════════════════════════════ -->
+<script>
+// ── PILL TOGGLE ──────────────────────────────────────────────
+function setPill(containerId, btn, inputId, value) {
+  const container = document.getElementById(containerId);
+  container.querySelectorAll('.pill-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById(inputId).value = value;
+}
+
+// ── CREDIT HISTORY SELECT ────────────────────────────────────
+function selectCredit(val) {
+  document.getElementById('creditHistory').value = val;
+  const good = document.getElementById('creditGood');
+  const poor = document.getElementById('creditPoor');
+  if (val === 1) {
+    good.style.background = '#EBF2ED';
+    good.style.borderColor = '#3D5A47';
+    good.querySelector('.material-symbols-outlined').style.color = '#3D5A47';
+    good.querySelector('div').style.color = '#3D5A47';
+    poor.style.background = '#fff';
+    poor.style.borderColor = '#DDDBD5';
+    poor.querySelectorAll('div').forEach(d => d.style.color = '#8A8A8A');
+    document.getElementById('creditScoreBar').style.width = '85%';
+    document.getElementById('creditScoreBar').style.background = 'linear-gradient(90deg,#3D5A47,#6B9E7A)';
+    document.getElementById('creditScoreLabel').textContent = 'Excellent';
+    document.getElementById('creditScoreLabel').style.color = '#3D5A47';
+  } else {
+    poor.style.background = '#FDECEA';
+    poor.style.borderColor = '#C0392B';
+    poor.querySelectorAll('.material-symbols-outlined').forEach(s => s.style.color = '#C0392B');
+    good.style.background = '#fff';
+    good.style.borderColor = '#DDDBD5';
+    document.getElementById('creditScoreBar').style.width = '12%';
+    document.getElementById('creditScoreBar').style.background = 'linear-gradient(90deg,#C0392B,#e74c3c)';
+    document.getElementById('creditScoreLabel').textContent = 'Poor';
+    document.getElementById('creditScoreLabel').style.color = '#C0392B';
+  }
+}
+
+// ── MODEL SELECT ─────────────────────────────────────────────
+function selectModel(el) {
+  document.querySelectorAll('.model-option').forEach(m => {
+    m.style.borderColor = '#DDDBD5';
+    m.style.background = '#fff';
+    m.querySelector('div').style.color = '#8A8A8A';
+  });
+  const model = el.dataset.model;
+  document.getElementById('selectedModel').value = model;
+  const colors = { rf: {bg:'#F0EEF8',border:'#5A3D8A',color:'#5A3D8A'}, lr: {bg:'#EBF2ED',border:'#3D5A47',color:'#3D5A47'}, dt: {bg:'#FDF3E3',border:'#C97B2A',color:'#C97B2A'} };
+  el.style.background = colors[model].bg;
+  el.style.borderColor = colors[model].border;
+}
+
+// ── EMI CALCULATOR ───────────────────────────────────────────
+function updateEMI() {
+  const appIncome = parseFloat(document.getElementById('applicantIncome').value) || 0;
+  const coIncome  = parseFloat(document.getElementById('coapplicantIncome').value) || 0;
+  const loanAmt   = parseFloat(document.getElementById('loanAmount').value) || 0;
+  const term      = parseFloat(document.getElementById('loanAmountTerm').value) || 360;
+  const totalIncome = appIncome + coIncome;
+  const monthlyRate = 0.085 / 12;
+  const months = term / 12;
+  let emi = 0;
+  if (monthlyRate > 0 && months > 0) {
+    emi = (loanAmt * 1000 * monthlyRate * Math.pow(1 + monthlyRate, months)) /
+          (Math.pow(1 + monthlyRate, months) - 1);
+  }
+  const dti = totalIncome > 0 ? Math.min(Math.round((emi / totalIncome) * 100), 99) : 0;
+  const incomeRatio = loanAmt > 0 && totalIncome > 0 ? (loanAmt * 1000 / (totalIncome * 12)).toFixed(1) : '—';
+  document.getElementById('dtiRatio').textContent = dti + '%';
+  document.getElementById('dtiRatio').style.color = dti > 50 ? '#C0392B' : dti > 35 ? '#C97B2A' : '#3D5A47';
+  const emiDisplay = emi >= 1000 ? (emi / 1000).toFixed(1) + 'K' : Math.round(emi).toString();
+  document.getElementById('emiAmt').textContent = '₹' + emiDisplay;
+  document.getElementById('incomeRatio').textContent = incomeRatio + 'x';
+}
+
+// ── DARK MODE ────────────────────────────────────────────────
+let isDark = false;
+function toggleDark() {
+  isDark = !isDark;
+  document.documentElement.classList.toggle('dark', isDark);
+  document.getElementById('darkIcon').textContent = isDark ? 'light_mode' : 'dark_mode';
+}
+
+// ── SCROLL HELPERS ───────────────────────────────────────────
+function scrollToSection(id) {
+  document.getElementById(id).scrollIntoView({ behavior: 'smooth' });
+}
+function scrollToTop() {
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ── RESET ────────────────────────────────────────────────────
+function resetForm() {
+  document.getElementById('defaultState').style.display = 'block';
+  document.getElementById('resultState').style.display = 'none';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ── PREDICTION ENGINE ────────────────────────────────────────
+function runPrediction() {
+  const btn = document.getElementById('predictBtn');
+  btn.innerHTML = '<svg class="loading-spinner" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg> Analyzing...';
+  btn.disabled = true;
+  btn.style.opacity = '0.8';
+
+  setTimeout(() => {
+    btn.innerHTML = '<span class="material-symbols-outlined filled" style="font-size:20px;">bolt</span> Generate Prediction';
+    btn.disabled = false;
+    btn.style.opacity = '1';
+    displayResult();
+  }, 1800);
+}
+
+function displayResult() {
+  // Gather inputs
+  const gender     = document.getElementById('gender').value;
+  const married    = document.getElementById('married').value;
+  const dependents = document.getElementById('dependents').value;
+  const education  = document.getElementById('education').value;
+  const selfEmp    = document.getElementById('selfEmployed').value;
+  const income     = parseFloat(document.getElementById('applicantIncome').value) || 0;
+  const coIncome   = parseFloat(document.getElementById('coapplicantIncome').value) || 0;
+  const loanAmt    = parseFloat(document.getElementById('loanAmount').value) || 0;
+  const loanTerm   = document.getElementById('loanAmountTerm').value;
+  const credit     = parseInt(document.getElementById('creditHistory').value);
+  const area       = document.getElementById('propertyArea').value;
+  const model      = document.getElementById('selectedModel').value;
+
+  // Heuristic scoring
+  let score = 50;
+  if (credit === 1) score += 35; else score -= 30;
+  const totalIncome = income + coIncome;
+  if (totalIncome > 8000) score += 12;
+  else if (totalIncome > 4000) score += 6;
+  else score -= 8;
+  if (loanAmt < 150) score += 8;
+  else if (loanAmt > 400) score -= 12;
+  else score += 2;
+  if (education === 'Graduate') score += 5;
+  if (selfEmp === 'No') score += 4;
+  if (area === 'Semiurban') score += 4;
+  else if (area === 'Rural') score -= 3;
+  if (married === 'Yes') score += 3;
+  const loanTermNum = parseInt(loanTerm);
+  if (loanTermNum >= 240) score += 3; else score -= 3;
+  // Add model variance
+  const modelVariance = { rf: 0, lr: -3, dt: -6 };
+  score += modelVariance[model];
+  score = Math.max(10, Math.min(97, score));
+  const approved = score >= 52;
+
+  // Build result
+  const modelNames = { rf: 'Random Forest', lr: 'Logistic Regression', dt: 'Decision Tree' };
+  const modelColors = { rf: '#5A3D8A', lr: '#3D5A47', dt: '#C97B2A' };
+  const modelBgColors = { rf: '#F0EEF8', lr: '#EBF2ED', dt: '#FDF3E3' };
+
+  // Show result panel
+  document.getElementById('defaultState').style.display = 'none';
+  document.getElementById('resultState').style.display = 'block';
+
+  // Result Card
+  const card = document.getElementById('resultCard');
+  if (approved) {
+    card.style.background = 'linear-gradient(135deg, #3D5A47 0%, #1A3328 100%)';
+    card.style.color = '#F5F3EE';
+    card.style.border = 'none';
+  } else {
+    card.style.background = 'linear-gradient(135deg, #7B1E1E 0%, #4A0E0E 100%)';
+    card.style.color = '#F5F3EE';
+    card.style.border = 'none';
+  }
+
+  // Badge
+  document.getElementById('resultBadge').innerHTML = `<span style="background:rgba(255,255,255,0.2);color:#fff;font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;padding:4px 10px;border-radius:99px;">Status: ${approved ? 'Likely Approved' : 'Likely Rejected'}</span>`;
+
+  // Title
+  document.getElementById('resultTitle').textContent = approved ? 'Approved' : 'Rejected';
+  document.getElementById('resultSubtitle').textContent = approved
+    ? 'Strong eligibility profile detected'
+    : 'Application may require improvements';
+
+  // Icon
+  const iconEl = document.getElementById('resultIcon');
+  iconEl.style.background = approved ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.15)';
+  iconEl.innerHTML = `<span class="material-symbols-outlined filled" style="font-size:32px;color:#fff;">${approved ? 'verified' : 'cancel'}</span>`;
+
+  // Confidence bar
+  document.getElementById('confScore').textContent = score + '%';
+  document.getElementById('confScore').style.color = '#fff';
+  document.getElementById('confLabel').style.color = 'rgba(255,255,255,0.7)';
+  const confBar = document.getElementById('confBar');
+  confBar.style.background = approved ? '#6B9E7A' : '#E57373';
+  setTimeout(() => { confBar.style.width = score + '%'; }, 100);
+
+  // Model badge
+  document.getElementById('modelUsedBadges').innerHTML = `
+    <span style="background:rgba(255,255,255,0.2);color:#fff;font-size:11px;font-weight:700;padding:4px 10px;border-radius:99px;display:inline-flex;align-items:center;gap:5px;">
+      <span class="material-symbols-outlined" style="font-size:13px;">check</span> ${modelNames[model]}
+    </span>
+    <span style="background:rgba(255,255,255,0.12);color:rgba(255,255,255,0.7);font-size:11px;font-weight:700;padding:4px 10px;border-radius:99px;">Confidence: ${score}%</span>
+  `;
+
+  // Quote
+  const quotes = {
+    approved_high: '"Strong credit history and solid income ratio positions this application favorably for approval."',
+    approved_low: '"Eligible profile with moderate confidence. Credit history is the key positive factor."',
+    rejected_low: '"Poor credit history significantly reduces approval probability. Focus on credit improvement."',
+    rejected_high: '"Multiple risk factors detected. Consider increasing income, reducing loan amount, or improving credit."'
+  };
+  let quoteKey = approved ? (score > 75 ? 'approved_high' : 'approved_low') : (score < 35 ? 'rejected_high' : 'rejected_low');
+  document.getElementById('resultQuote').textContent = quotes[quoteKey];
+
+  // Risk Factors
+  const factors = [
+    {
+      label: 'Credit History',
+      icon: credit === 1 ? 'check_circle' : 'cancel',
+      status: credit === 1 ? 'Prime' : 'High Risk',
+      statusColor: credit === 1 ? '#3D5A47' : '#C0392B',
+      statusBg: credit === 1 ? '#EBF2ED' : '#FDECEA',
+      barWidth: credit === 1 ? 85 : 10,
+      barColor: credit === 1 ? '#3D5A47' : '#C0392B'
+    },
+    {
+      label: 'Income Adequacy',
+      icon: totalIncome > 5000 ? 'trending_up' : totalIncome > 3000 ? 'trending_flat' : 'trending_down',
+      status: totalIncome > 5000 ? 'Strong' : totalIncome > 3000 ? 'Moderate' : 'Weak',
+      statusColor: totalIncome > 5000 ? '#3D5A47' : totalIncome > 3000 ? '#C97B2A' : '#C0392B',
+      statusBg: totalIncome > 5000 ? '#EBF2ED' : totalIncome > 3000 ? '#FDF3E3' : '#FDECEA',
+      barWidth: Math.min(100, totalIncome / 120),
+      barColor: totalIncome > 5000 ? '#3D5A47' : totalIncome > 3000 ? '#C97B2A' : '#C0392B'
+    },
+    {
+      label: 'Loan-to-Income Ratio',
+      icon: loanAmt * 1000 / Math.max(totalIncome * 12, 1) < 3 ? 'check_circle' : 'warning',
+      status: loanAmt * 1000 / Math.max(totalIncome * 12, 1) < 3 ? 'Acceptable' : 'Elevated',
+      statusColor: loanAmt * 1000 / Math.max(totalIncome * 12, 1) < 3 ? '#3D5A47' : '#C97B2A',
+      statusBg: loanAmt * 1000 / Math.max(totalIncome * 12, 1) < 3 ? '#EBF2ED' : '#FDF3E3',
+      barWidth: Math.max(10, 100 - Math.min(100, (loanAmt * 1000 / Math.max(totalIncome * 12, 1)) * 20)),
+      barColor: loanAmt * 1000 / Math.max(totalIncome * 12, 1) < 3 ? '#3D5A47' : '#C97B2A'
+    },
+    {
+      label: 'Property Area',
+      icon: area === 'Semiurban' ? 'check_circle' : area === 'Urban' ? 'info' : 'warning',
+      status: area === 'Semiurban' ? 'Favorable' : area === 'Urban' ? 'Neutral' : 'Below Avg',
+      statusColor: area === 'Semiurban' ? '#3D5A47' : area === 'Urban' ? '#8A8A8A' : '#C97B2A',
+      statusBg: area === 'Semiurban' ? '#EBF2ED' : area === 'Urban' ? '#F5F3EE' : '#FDF3E3',
+      barWidth: area === 'Semiurban' ? 78 : area === 'Urban' ? 65 : 48,
+      barColor: area === 'Semiurban' ? '#3D5A47' : area === 'Urban' ? '#8A8A8A' : '#C97B2A'
+    }
+  ];
+
+  document.getElementById('riskFactors').innerHTML = factors.map(f => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:#F5F3EE;border-radius:12px;gap:10px;">
+      <div style="display:flex;align-items:center;gap:10px;flex:1;">
+        <span class="material-symbols-outlined filled" style="color:${f.statusColor};font-size:18px;flex-shrink:0;">${f.icon}</span>
+        <div style="flex:1;">
+          <div style="font-size:13px;font-weight:700;margin-bottom:4px;">${f.label}</div>
+          <div class="factor-bar"><div class="factor-fill" style="width:${f.barWidth}%;background:${f.barColor};"></div></div>
+        </div>
+      </div>
+      <span style="background:${f.statusBg};color:${f.statusColor};font-size:11px;font-weight:700;padding:3px 8px;border-radius:99px;white-space:nowrap;flex-shrink:0;">${f.status}</span>
+    </div>
+  `).join('');
+
+  // All Models Results
+  const modelScores = {
+    rf: Math.max(10, Math.min(97, score)),
+    lr: Math.max(10, Math.min(95, score - 3)),
+    dt: Math.max(10, Math.min(90, score - 6))
+  };
+  document.getElementById('allModelResults').innerHTML = ['rf','lr','dt'].map(m => {
+    const s = modelScores[m];
+    const a = s >= 52;
+    const names = { rf: 'Random Forest', lr: 'Logistic Regression', dt: 'Decision Tree' };
+    const icons = { rf: 'forest', lr: 'linear_scale', dt: 'account_tree' };
+    return `
+      <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:${m === model ? modelBgColors[m] : '#F5F3EE'};border-radius:12px;border:${m === model ? '2px solid ' + modelColors[m] : '2px solid transparent'};">
+        <span class="material-symbols-outlined" style="color:${modelColors[m]};font-size:18px;flex-shrink:0;">${icons[m]}</span>
+        <div style="flex:1;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+            <span style="font-size:12px;font-weight:700;">${names[m]}${m === model ? ' <span style="font-size:10px;opacity:0.6;">(selected)</span>' : ''}</span>
+            <span style="font-family:'DM Mono',monospace;font-size:13px;font-weight:700;color:${modelColors[m]};">${s}%</span>
+          </div>
+          <div class="factor-bar"><div class="factor-fill" style="width:${s}%;background:${modelColors[m]};"></div></div>
+        </div>
+        <span style="font-size:11px;font-weight:700;color:${a ? '#3D5A47' : '#C0392B'};background:${a ? '#EBF2ED' : '#FDECEA'};padding:3px 8px;border-radius:99px;flex-shrink:0;">${a ? 'Approve' : 'Reject'}</span>
+      </div>
+    `;
+  }).join('');
+
+  // Application Summary
+  const summaryItems = [
+    ['Gender', gender],
+    ['Married', married],
+    ['Dependents', dependents === '3' ? '3+' : dependents],
+    ['Education', education],
+    ['Employment', selfEmp === 'Yes' ? 'Self-Employed' : 'Salaried'],
+    ['Applicant Income', '₹' + income.toLocaleString()],
+    ['Co-Applicant', '₹' + coIncome.toLocaleString()],
+    ['Loan Amount', '₹' + loanAmt + 'K'],
+    ['Loan Term', loanTerm + ' days'],
+    ['Property Area', area],
+    ['Credit History', credit === 1 ? 'Good (1.0)' : 'Poor (0.0)'],
+    ['Model Used', modelNames[model]]
+  ];
+
+  document.getElementById('appSummary').innerHTML = summaryItems.map(([k, v]) => `
+    <div style="background:#fff;border-radius:8px;padding:8px 10px;">
+      <div style="font-size:10px;color:#8A8A8A;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:2px;">${k}</div>
+      <div style="font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${v}</div>
+    </div>
+  `).join('');
+
+  // Scroll to result on mobile
+  if (window.innerWidth < 1024) {
+    setTimeout(() => document.getElementById('resultState').scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+  }
+}
+
+// ── INIT ─────────────────────────────────────────────────────
+updateEMI();
+</script>
+</body>
+</html>
